@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kiteframe deal calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #EEF1EA;
+    --surface: #FFFFFF;
+    --ink: #1C2321;
+    --muted: #5C665F;
+    --line: #D6DACF;
+    --line-strong: #B9BFB0;
+    --ae: #2F6B57;
+    --ae-bg: #E3EFE9;
+    --mgr: #A5701F;
+    --mgr-bg: #F5EBD8;
+    --vp: #94382A;
+    --vp-bg: #F3E1DC;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 48px 32px 80px;
+  }
+  header.page-head {
+    margin-bottom: 40px;
+    border-bottom: 1px solid var(--line-strong);
+    padding-bottom: 20px;
+  }
+  header.page-head h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 28px;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  header.page-head p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .layout {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 32px;
+    align-items: start;
+  }
+  @media (max-width: 800px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 24px;
+  }
+  .panel + .panel { margin-top: 24px; }
+  .panel h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0 0 4px;
+  }
+  .panel .sub {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin: 0 0 18px;
+    line-height: 1.5;
+  }
+  .field {
+    margin-bottom: 18px;
+  }
+  .field:last-child { margin-bottom: 0; }
+  .field label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: var(--ink);
+  }
+  .field label .tag {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  input[type="number"] {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+    background: var(--surface);
+  }
+  input[type="number"]:focus {
+    outline: none;
+    border-color: var(--ae);
+    box-shadow: 0 0 0 2px rgba(47,107,87,0.15);
+  }
+  input[type="range"] {
+    flex: 1;
+    accent-color: var(--ae);
+    height: 4px;
+  }
+  .field .prefix {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .assumption-note {
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+  .assumption-flag {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 500;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: var(--mgr-bg);
+    color: var(--mgr);
+    text-transform: none;
+  }
+  /* ledger */
+  .approval-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 5px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+  .approval-badge .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  .approval-badge.ae { background: var(--ae-bg); color: var(--ae); }
+  .approval-badge.ae .dot { background: var(--ae); }
+  .approval-badge.mgr { background: var(--mgr-bg); color: var(--mgr); }
+  .approval-badge.mgr .dot { background: var(--mgr); }
+  .approval-badge.vp { background: var(--vp-bg); color: var(--vp); }
+  .approval-badge.vp .dot { background: var(--vp); }
+
+  .ledger {
+    border-top: 1px solid var(--line);
+  }
+  .ledger-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--line);
+    gap: 12px;
+  }
+  .ledger-row .label {
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .ledger-row .label .desc {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+    font-weight: 400;
+  }
+  .ledger-row .value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 20px;
+    white-space: nowrap;
+    text-align: right;
+  }
+  .ledger-row.subtle .value {
+    font-size: 16px;
+    color: var(--muted);
+  }
+  .ledger-row.total .value { color: var(--ae); }
+  .ledger-row.loss .value { color: var(--vp); }
+  .ledger-row.impl .value { color: var(--muted); font-weight: 500; }
+
+  .footnote {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 24px;
+    line-height: 1.6;
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+  }
+  .footnote strong { color: var(--ink); font-weight: 500; }
+
+  textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    color: var(--ink);
+    background: var(--surface);
+    resize: vertical;
+    min-height: 60px;
+    line-height: 1.5;
+  }
+  textarea:focus {
+    outline: none;
+    border-color: var(--ae);
+    box-shadow: 0 0 0 2px rgba(47,107,87,0.15);
+  }
+
+  .giveup-box {
+    background: var(--vp-bg);
+    border: 1px solid var(--vp);
+    border-radius: 6px;
+    padding: 16px 18px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .giveup-box .label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--vp);
+  }
+  .giveup-box .label .desc {
+    display: block;
+    font-size: 11.5px;
+    color: var(--vp);
+    opacity: 0.85;
+    margin-top: 2px;
+    font-weight: 400;
+  }
+  .giveup-box .value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 22px;
+    color: var(--vp);
+    white-space: nowrap;
+  }
+
+  .approval-warning {
+    border-radius: 6px;
+    padding: 14px 16px;
+    margin-bottom: 24px;
+    display: none;
+  }
+  .approval-warning.show { display: block; }
+  .approval-warning.mgr { background: var(--mgr-bg); border: 1px solid var(--mgr); }
+  .approval-warning.vp { background: var(--vp-bg); border: 1px solid var(--vp); }
+  .approval-warning .head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+  .approval-warning.mgr .head { color: var(--mgr); }
+  .approval-warning.vp .head { color: var(--vp); }
+  .approval-warning .body {
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+  .approval-warning.mgr .body { color: var(--mgr); }
+  .approval-warning.vp .body { color: var(--vp); }
+  .approval-warning .warn-icon {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .approval-warning.mgr .warn-icon { background: var(--mgr); color: #fff; }
+  .approval-warning.vp .warn-icon { background: var(--vp); color: #fff; }
+
+  .assumptions-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin-top: 24px;
+    font-size: 12.5px;
+  }
+  .assumptions-strip .item {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+  }
+  .assumptions-strip .item .k {
+    color: var(--muted);
+  }
+  .assumptions-strip .item .v {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    color: var(--ink);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="page-head">
+    <h1>Kiteframe deal calculator</h1>
+    <p>For internal pricing conversations. All figures are illustrative practice numbers — not live pricing.</p>
+  </header>
+
+  <div class="layout">
+
+    <div class="inputs-col">
+      <div class="panel">
+        <h2>Deal inputs</h2>
+        <p class="sub">Adjust the deal terms you're discussing.</p>
+
+        <div class="field">
+          <label for="listArr">First-year list ARR</label>
+          <div class="input-row">
+            <span class="prefix">$</span>
+            <input type="number" id="listArr" value="60000" min="0" step="1000">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="discount">Discount <span class="tag" id="discountOut">0%</span></label>
+          <div class="input-row">
+            <input type="range" id="discount" min="0" max="30" value="0" step="1">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="years">Contract length (years)</label>
+          <div class="input-row">
+            <input type="number" id="years" value="1" min="1" max="5" step="1">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="commission">Commission rate <span class="tag" id="commissionOut">10%</span></label>
+          <div class="input-row">
+            <input type="range" id="commission" min="0" max="20" value="10" step="0.5">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="implFee">One-time implementation fee</label>
+          <div class="input-row">
+            <span class="prefix">$</span>
+            <input type="number" id="implFee" value="0" min="0" step="500">
+          </div>
+          <p class="assumption-note">Not commissionable. Shown separately from ARR and contract value in every total below.</p>
+        </div>
+
+        <div class="field">
+          <label for="whatWeReceive">What we receive</label>
+          <textarea id="whatWeReceive" placeholder="e.g. 2-year term, faster signature, case study rights"></textarea>
+          <p class="assumption-note">Record the business reason for this concession — what Kiteframe gets in return for the discount.</p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Approval thresholds <span class="assumption-flag">editable</span></h2>
+        <p class="sub">Practice-scenario rules. Change these if your real authority table differs.</p>
+
+        <div class="field">
+          <label for="aeMax">Max discount at AE authority <span class="tag" id="aeMaxOut">8%</span></label>
+          <div class="input-row">
+            <input type="range" id="aeMax" min="0" max="30" value="8" step="1">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="mgrMax">Max discount at Manager authority <span class="tag" id="mgrMaxOut">15%</span></label>
+          <div class="input-row">
+            <input type="range" id="mgrMax" min="0" max="40" value="15" step="1">
+          </div>
+          <p class="assumption-note">Above this, approval escalates to VP Sales.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="output-col">
+      <div class="panel">
+        <h2>Live deal ledger</h2>
+        <p class="sub">Updates as you adjust the inputs on the left.</p>
+
+        <div class="giveup-box">
+          <div class="label">Annual revenue given up
+            <span class="desc">List ARR minus discounted ARR — the top-line dollars this discount costs per year</span>
+          </div>
+          <div class="value" id="revenueGivenUp">$0</div>
+        </div>
+
+        <div id="approvalBadge" class="approval-badge ae">
+          <span class="dot"></span>
+          <span id="approvalText">AE can approve this discount</span>
+        </div>
+
+        <div id="approvalWarning" class="approval-warning">
+          <div class="head"><span class="warn-icon">!</span><span id="approvalWarningHead">Manager approval required</span></div>
+          <div class="body" id="approvalWarningBody">This discount is above AE authority. Get sign-off before committing it to the customer.</div>
+        </div>
+
+        <div class="ledger">
+          <div class="ledger-row total">
+            <div class="label">First-year ARR after discount
+              <span class="desc">List ARR less the discount above</span>
+            </div>
+            <div class="value" id="arrAfterDiscount">$60,000</div>
+          </div>
+
+          <div class="ledger-row">
+            <div class="label">Total subscription contract value
+              <span class="desc">First-year ARR (after discount) × contract years. Assumes flat ARR each renewal year — edit if you expect escalation.</span>
+            </div>
+            <div class="value" id="totalContractValue">$60,000</div>
+          </div>
+
+          <div class="ledger-row impl">
+            <div class="label">Implementation fee
+              <span class="desc">Separate from ARR and contract value. Not commissionable.</span>
+            </div>
+            <div class="value" id="implFeeOut">$0</div>
+          </div>
+
+          <div class="ledger-row subtle">
+            <div class="label">First-year commission
+              <span class="desc">Commission rate × first-year ARR after discount. Implementation fee excluded.</span>
+            </div>
+            <div class="value" id="commissionOutVal">$6,000</div>
+          </div>
+
+          <div class="ledger-row loss">
+            <div class="label">Commission lost vs. list price
+              <span class="desc">Commission rate × (list ARR − discounted ARR)</span>
+            </div>
+            <div class="value" id="commissionLost">$0</div>
+          </div>
+        </div>
+
+        <div class="footnote">
+          <strong>Assumptions used above (all editable in this app):</strong> commission is calculated on first-year subscription ARR only, never on the implementation fee. Multi-year total contract value assumes flat first-year ARR repeated each year — it does not model renewal escalation, expansion, or churn. Approval thresholds shown reflect the practice-scenario rule set and are adjustable in the panel on the left.
+        </div>
+      </div>
+
+      <div class="assumptions-strip">
+        <div class="item"><span class="k">Commission rate:</span><span class="v" id="strCommission">10%</span></div>
+        <div class="item"><span class="k">AE authority:</span><span class="v" id="strAe">≤8%</span></div>
+        <div class="item"><span class="k">Manager authority:</span><span class="v" id="strMgr">≤15%</span></div>
+        <div class="item"><span class="k">VP Sales:</span><span class="v" id="strVp">&gt;15%</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const fmt = n => '$' + Math.round(n).toLocaleString('en-US');
+  const pct = n => Math.round(n) + '%';
+
+  function calc() {
+    const listArr = parseFloat($('listArr').value) || 0;
+    const discount = parseFloat($('discount').value) || 0;
+    const years = Math.max(1, parseInt($('years').value) || 1);
+    const commissionRate = parseFloat($('commission').value) || 0;
+    const implFee = parseFloat($('implFee').value) || 0;
+    const aeMax = parseFloat($('aeMax').value) || 0;
+    const mgrMax = parseFloat($('mgrMax').value) || 0;
+
+    $('discountOut').textContent = pct(discount);
+    $('commissionOut').textContent = pct(commissionRate);
+    $('aeMaxOut').textContent = pct(aeMax);
+    $('mgrMaxOut').textContent = pct(mgrMax);
+
+    const arrAfterDiscount = listArr * (1 - discount / 100);
+    const totalContractValue = arrAfterDiscount * years;
+    const firstYearCommission = arrAfterDiscount * (commissionRate / 100);
+    const revenueGivenUp = listArr - arrAfterDiscount;
+    const commissionLost = revenueGivenUp * (commissionRate / 100);
+
+    $('arrAfterDiscount').textContent = fmt(arrAfterDiscount);
+    $('totalContractValue').textContent = fmt(totalContractValue);
+    $('implFeeOut').textContent = fmt(implFee);
+    $('commissionOutVal').textContent = fmt(firstYearCommission);
+    $('revenueGivenUp').textContent = fmt(revenueGivenUp);
+    $('commissionLost').textContent = fmt(commissionLost);
+
+    const badge = $('approvalBadge');
+    const text = $('approvalText');
+    const warning = $('approvalWarning');
+    const warnHead = $('approvalWarningHead');
+    const warnBody = $('approvalWarningBody');
+    badge.classList.remove('ae', 'mgr', 'vp');
+    warning.classList.remove('mgr', 'vp', 'show');
+
+    if (discount <= aeMax) {
+      badge.classList.add('ae');
+      text.textContent = 'AE can approve this discount';
+    } else if (discount <= mgrMax) {
+      badge.classList.add('mgr');
+      text.textContent = 'Manager approval required';
+      warning.classList.add('mgr', 'show');
+      warnHead.textContent = 'Above AE authority — Manager approval required';
+      warnBody.textContent = `This discount (${Math.round(discount)}%) exceeds the AE limit of ${Math.round(aeMax)}%. Get sign-off from your manager before committing this to the customer.`;
+    } else {
+      badge.classList.add('vp');
+      text.textContent = 'VP Sales approval required';
+      warning.classList.add('vp', 'show');
+      warnHead.textContent = 'Above Manager authority — VP Sales approval required';
+      warnBody.textContent = `This discount (${Math.round(discount)}%) exceeds the Manager limit of ${Math.round(mgrMax)}%. Get sign-off from VP Sales before committing this to the customer.`;
+    }
+
+    $('strCommission').textContent = pct(commissionRate);
+    $('strAe').textContent = '≤' + pct(aeMax);
+    $('strMgr').textContent = '≤' + pct(mgrMax);
+    $('strVp').textContent = '>' + pct(mgrMax);
+  }
+
+  ['listArr','discount','years','commission','implFee','aeMax','mgrMax'].forEach(id => {
+    $(id).addEventListener('input', calc);
+  });
+
+  calc();
+</script>
+
+</body>
+</html>
