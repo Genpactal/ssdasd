@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Close Risk Dashboard</title>
+<style>
+  :root{
+    --bg:#F1F3F6;
+    --surface:#FFFFFF;
+    --ink:#1B2430;
+    --muted:#5B6472;
+    --border:#DCE1E7;
+    --brand:#1D3557;
+    --brand-ink:#0F2038;
+    --done:#256B4C;
+    --done-bg:#E4F2EA;
+    --progress-c:#9A6B00;
+    --progress-bg:#FCEFD2;
+    --blocked:#9E2B22;
+    --blocked-bg:#FBE7E4;
+    --notstarted:#5B6472;
+    --notstarted-bg:#EDEFF2;
+    --lock-bg:#6E1F1A;
+    --unlock-bg:#1B5E42;
+    --serif: "Iowan Old Style", "Palatino Linotype", "URW Palladio L", Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    line-height:1.45;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{ color:inherit; }
+  button{ font-family:inherit; }
+  :focus-visible{ outline:2px solid var(--brand); outline-offset:2px; }
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.001ms !important; transition-duration:0.001ms !important; }
+  }
+
+  .wrap{ max-width:1120px; margin:0 auto; padding:0 20px 64px; }
+
+  /* Header */
+  header.top{
+    background:var(--brand);
+    color:#F4F6F9;
+    padding:22px 0 26px;
+    border-bottom:3px solid var(--brand-ink);
+  }
+  header.top .wrap{
+    display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap;
+  }
+  header.top h1{
+    font-family:var(--serif);
+    font-weight:400;
+    font-size:1.85rem;
+    margin:0 0 4px;
+    letter-spacing:0.2px;
+  }
+  header.top p{
+    margin:0; color:#C9D3DF; font-size:0.92rem;
+  }
+  .source-controls{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  }
+  .source-label{
+    font-size:0.8rem; color:#C9D3DF; max-width:220px; text-align:right;
+  }
+  .btn{
+    border:1px solid rgba(255,255,255,0.35);
+    background:rgba(255,255,255,0.08);
+    color:#F4F6F9;
+    padding:9px 16px;
+    border-radius:3px;
+    font-size:0.88rem;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .btn:hover{ background:rgba(255,255,255,0.18); }
+  .btn-primary{
+    background:#F4F6F9; color:var(--brand-ink); border-color:#F4F6F9; font-weight:600;
+  }
+  .btn-primary:hover{ background:#DDE4EC; }
+  #csvInput{ display:none; }
+
+  /* Sign-off banner */
+  .signoff{
+    margin-top:22px;
+    border-radius:4px;
+    padding:18px 22px;
+    display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+    color:#F6F1EC;
+  }
+  .signoff.locked{ background:var(--lock-bg); }
+  .signoff.unlocked{ background:var(--unlock-bg); }
+  .signoff .status-text{
+    font-family:var(--serif);
+    font-size:1.3rem;
+  }
+  .signoff .status-sub{
+    font-size:0.85rem; opacity:0.85; margin-top:2px;
+  }
+  .signoff .badge{
+    font-size:0.78rem;
+    border:1px solid rgba(255,255,255,0.5);
+    padding:4px 10px;
+    border-radius:20px;
+    white-space:nowrap;
+  }
+
+  /* Stat strip */
+  .stats{
+    margin-top:22px;
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:14px;
+  }
+  @media (max-width:760px){
+    .stats{ grid-template-columns:repeat(2, 1fr); }
+  }
+  .stat-card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-left:4px solid var(--brand);
+    border-radius:3px;
+    padding:16px 18px;
+  }
+  .stat-card.c-blocked{ border-left-color:var(--blocked); }
+  .stat-card.c-overdue{ border-left-color:var(--progress-c); }
+  .stat-card.c-exceptions{ border-left-color:var(--brand); }
+  .stat-card .num{
+    font-family:var(--serif);
+    font-size:2.1rem;
+    line-height:1;
+  }
+  .stat-card .num small{ font-size:1.1rem; color:var(--muted); font-weight:400; }
+  .stat-card .lbl{
+    margin-top:6px; font-size:0.85rem; color:var(--muted);
+  }
+  .stat-card .bar{
+    margin-top:10px; height:6px; background:var(--border); border-radius:3px; overflow:hidden;
+  }
+  .stat-card .bar > div{ height:100%; background:var(--done); }
+
+  /* Section headings */
+  section{ margin-top:34px; }
+  .section-head{
+    display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap;
+    margin-bottom:12px;
+  }
+  .section-head h2{
+    font-family:var(--serif); font-weight:400; font-size:1.25rem; margin:0;
+  }
+  .section-head .hint{ font-size:0.82rem; color:var(--muted); }
+
+  /* Blockers */
+  .blockers-empty{
+    background:var(--done-bg); color:var(--done); border:1px solid #BFE0CC;
+    border-radius:3px; padding:14px 16px; font-size:0.92rem;
+  }
+  .blocker-card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-left:4px solid var(--blocked);
+    border-radius:3px;
+    padding:14px 16px;
+    margin-bottom:10px;
+    display:grid;
+    grid-template-columns:1.6fr 1fr 1fr 2fr 0.8fr;
+    gap:14px;
+    align-items:start;
+  }
+  @media (max-width:760px){
+    .blocker-card{ grid-template-columns:1fr; gap:6px; }
+    .blocker-card .field{ display:flex; justify-content:space-between; gap:10px; }
+  }
+  .blocker-card .field .k{
+    font-size:0.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.03em;
+  }
+  .blocker-card .field .v{ font-size:0.92rem; margin-top:2px; }
+  .blocker-card .field .v.task{ font-weight:600; }
+  .blocker-card .field .v.exc{ font-weight:700; color:var(--blocked); }
+
+  /* Filters */
+  .filters{
+    display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px;
+  }
+  .filter-group{ display:flex; flex-direction:column; gap:4px; }
+  .filter-group label{ font-size:0.76rem; color:var(--muted); }
+  .filter-group select{
+    border:1px solid var(--border); border-radius:3px; padding:7px 10px;
+    font-size:0.88rem; background:var(--surface); color:var(--ink); min-width:160px;
+  }
+
+  /* Table */
+  .table-scroll{
+    overflow-x:auto;
+    border:1px solid var(--border);
+    border-radius:3px;
+    background:var(--surface);
+  }
+  table{ width:100%; border-collapse:collapse; min-width:720px; }
+  thead th{
+    text-align:left; font-size:0.78rem; color:var(--muted);
+    padding:10px 14px; border-bottom:1px solid var(--border);
+    background:#F7F8FA; white-space:nowrap;
+  }
+  tbody td{
+    padding:11px 14px; border-bottom:1px solid var(--border); font-size:0.9rem; vertical-align:top;
+  }
+  tbody tr:last-child td{ border-bottom:none; }
+  tbody tr:hover{ background:#FAFBFC; }
+  td.notes{ color:var(--muted); max-width:280px; }
+  td.overdue-flag{ color:var(--blocked); font-weight:600; font-size:0.8rem; }
+
+  .status-badge{
+    display:inline-block; padding:3px 10px; border-radius:20px; font-size:0.78rem; font-weight:600;
+    white-space:nowrap;
+  }
+  .status-done{ background:var(--done-bg); color:var(--done); }
+  .status-progress{ background:var(--progress-bg); color:var(--progress-c); }
+  .status-blocked{ background:var(--blocked-bg); color:var(--blocked); }
+  .status-notstarted{ background:var(--notstarted-bg); color:var(--notstarted); }
+
+  .empty-row td{ text-align:center; color:var(--muted); padding:24px; }
+
+  footer{
+    margin-top:40px; padding-top:16px; border-top:1px solid var(--border);
+    font-size:0.78rem; color:var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div>
+      <h1>Close Risk Dashboard</h1>
+      <p id="sourceLine">Sample data — day6_close_checklist.csv</p>
+    </div>
+    <div class="source-controls">
+      <span class="source-label" id="lastLoaded"></span>
+      <button class="btn btn-primary" id="uploadBtn" type="button">Upload CSV</button>
+      <input type="file" id="csvInput" accept=".csv,text/csv">
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="signoff locked" id="signoffBanner">
+    <div>
+      <div class="status-text" id="signoffText">LOCKED — close is not ready for sign-off</div>
+      <div class="status-sub" id="signoffSub">Every task must be Done and open exceptions must total zero.</div>
+    </div>
+    <div class="badge" id="signoffBadge">0 / 0 done · 0 exceptions</div>
+  </div>
+
+  <section class="stats" aria-label="Summary metrics">
+    <div class="stat-card">
+      <div class="num" id="statProgress">0<small>/0</small></div>
+      <div class="lbl">Tasks done</div>
+      <div class="bar"><div id="statProgressBar" style="width:0%"></div></div>
+    </div>
+    <div class="stat-card c-blocked">
+      <div class="num" id="statBlocked">0</div>
+      <div class="lbl">Blocked tasks</div>
+    </div>
+    <div class="stat-card c-overdue">
+      <div class="num" id="statOverdue">0</div>
+      <div class="lbl">Overdue &amp; unfinished</div>
+    </div>
+    <div class="stat-card c-exceptions">
+      <div class="num" id="statExceptions">0</div>
+      <div class="lbl">Total open exceptions</div>
+    </div>
+  </section>
+
+  <section aria-labelledby="blockersHead">
+    <div class="section-head">
+      <h2 id="blockersHead">Blockers</h2>
+      <span class="hint">Tasks currently marked Blocked, regardless of the filters below</span>
+    </div>
+    <div id="blockersContainer"></div>
+  </section>
+
+  <section aria-labelledby="tableHead">
+    <div class="section-head">
+      <h2 id="tableHead">Full task list</h2>
+      <span class="hint" id="overdueHint"></span>
+    </div>
+
+    <div class="filters">
+      <div class="filter-group">
+        <label for="statusFilter">Status</label>
+        <select id="statusFilter"><option value="">All statuses</option></select>
+      </div>
+      <div class="filter-group">
+        <label for="ownerFilter">Owner</label>
+        <select id="ownerFilter"><option value="">All owners</option></select>
+      </div>
+    </div>
+
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Task</th>
+            <th>Owner</th>
+            <th>Due date</th>
+            <th>Status</th>
+            <th>Open exceptions</th>
+            <th>Last updated</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody id="taskTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <span id="footerNote"></span> — Status is read from the loaded file only; nothing on this page changes a task's status.
+  </footer>
+
+</div>
+
+<script>
+(function(){
+
+  var SAMPLE_CSV = "Task,Owner,Due_Date,Status,Open_Exceptions,Last_Updated,Notes\r\n" +
+    "Bank reconciliation,Maya Chen,2026-05-02,Done,0,2026-05-02,Tied to statement\r\n" +
+    "AP cutoff review,Luis Ortega,2026-05-03,In progress,2,2026-05-03,Two invoices need period check\r\n" +
+    "AR aging review,Maya Chen,2026-05-03,Done,0,2026-05-03,No material exceptions\r\n" +
+    "Inventory reserve,Priya Shah,2026-05-04,Blocked,1,2026-05-02,Awaiting obsolete-stock report\r\n" +
+    "Freight accrual,Luis Ortega,2026-05-04,In progress,1,2026-05-03,Carrier invoice estimate pending\r\n" +
+    "Payroll accrual,Maya Chen,2026-05-04,Done,0,2026-05-04,Reviewed\r\n" +
+    "Intercompany reconciliation,Priya Shah,2026-05-05,In progress,1,2026-05-04,Difference under investigation\r\n" +
+    "Flux commentary,Controller,2026-05-05,Not started,0,2026-05-01,Depends on final P&L\r\n" +
+    "Controller review package,Controller,2026-05-06,Not started,0,2026-05-01,Cannot start until blockers clear\r\n";
+
+  var FIELD_SYNONYMS = {
+    task: ["task","tasks","checklistitem","item","name"],
+    owner: ["owner","assignee","ownername","responsible"],
+    dueDate: ["duedate","due"],
+    status: ["status"],
+    openExceptions: ["openexceptions","exceptions","openexception","exceptioncount"],
+    lastUpdated: ["lastupdated","updated","updateddate"],
+    notes: ["notes","note","comment","comments","reason"]
+  };
+
+  function normalizeHeader(h){
+    return String(h || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  }
+
+  function buildHeaderMap(headers){
+    var map = {};
+    headers.forEach(function(h, idx){
+      var norm = normalizeHeader(h);
+      Object.keys(FIELD_SYNONYMS).forEach(function(key){
+        if (FIELD_SYNONYMS[key].indexOf(norm) !== -1 && map[key] === undefined) {
+          map[key] = idx;
+        }
+      });
+    });
+    return map;
+  }
+
+  // Minimal RFC4180-ish CSV parser: handles quoted fields, escaped quotes, commas/newlines inside quotes.
+  function parseCSV(text){
+    var rows = [];
+    var row = [];
+    var field = "";
+    var inQuotes = false;
+    text = text.replace(/^\uFEFF/, ""); // strip BOM if present
+    for (var i = 0; i < text.length; i++){
+      var c = text[i];
+      if (inQuotes){
+        if (c === '"'){
+          if (text[i+1] === '"'){ field += '"'; i++; }
+          else { inQuotes = false; }
+        } else {
+          field += c;
+        }
+      } else {
+        if (c === '"'){ inQuotes = true; }
+        else if (c === ','){ row.push(field); field = ""; }
+        else if (c === '\r'){ /* skip, \n handles the break */ }
+        else if (c === '\n'){ row.push(field); rows.push(row); row = []; field = ""; }
+        else { field += c; }
+      }
+    }
+    if (field.length > 0 || row.length > 0){ row.push(field); rows.push(row); }
+    // drop fully-empty trailing rows
+    rows = rows.filter(function(r){ return r.some(function(v){ return String(v).trim() !== ""; }); });
+    return rows;
+  }
+
+  function parseChecklist(text){
+    var rows = parseCSV(text);
+    if (rows.length === 0) return [];
+    var headers = rows[0];
+    var map = buildHeaderMap(headers);
+    var data = [];
+    for (var i = 1; i < rows.length; i++){
+      var r = rows[i];
+      var get = function(key){
+        var idx = map[key];
+        return idx === undefined ? "" : (r[idx] === undefined ? "" : String(r[idx]).trim());
+      };
+      var exceptionsRaw = get("openExceptions");
+      var exceptionsNum = parseInt(exceptionsRaw, 10);
+      if (isNaN(exceptionsNum)) exceptionsNum = 0;
+      data.push({
+        task: get("task"),
+        owner: get("owner"),
+        dueDate: get("dueDate"),
+        status: get("status"),
+        openExceptions: exceptionsNum,
+        lastUpdated: get("lastUpdated"),
+        notes: get("notes")
+      });
+    }
+    return data.filter(function(d){ return d.task !== ""; });
+  }
+
+  function normStatus(s){
+    var n = String(s || "").toLowerCase().replace(/[^a-z]/g, "");
+    if (n === "done" || n === "complete" || n === "completed") return "done";
+    if (n === "blocked") return "blocked";
+    if (n === "notstarted") return "notstarted";
+    return "progress"; // "In progress" and anything else unrecognized bucket here
+  }
+
+  function statusBadgeClass(norm){
+    if (norm === "done") return "status-done";
+    if (norm === "blocked") return "status-blocked";
+    if (norm === "notstarted") return "status-notstarted";
+    return "status-progress";
+  }
+
+  function parseDate(s){
+    if (!s) return null;
+    var d = new Date(s + "T00:00:00");
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function todayMidnight(){
+    var d = new Date();
+    d.setHours(0,0,0,0);
+    return d;
+  }
+
+  function escapeHtml(s){
+    return String(s || "").replace(/[&<>"']/g, function(c){
+      return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
+    });
+  }
+
+  // ---- state ----
+  var currentData = [];
+  var activeStatusFilter = "";
+  var activeOwnerFilter = "";
+
+  var els = {
+    signoffBanner: document.getElementById("signoffBanner"),
+    signoffText: document.getElementById("signoffText"),
+    signoffSub: document.getElementById("signoffSub"),
+    signoffBadge: document.getElementById("signoffBadge"),
+    statProgress: document.getElementById("statProgress"),
+    statProgressBar: document.getElementById("statProgressBar"),
+    statBlocked: document.getElementById("statBlocked"),
+    statOverdue: document.getElementById("statOverdue"),
+    statExceptions: document.getElementById("statExceptions"),
+    blockersContainer: document.getElementById("blockersContainer"),
+    statusFilter: document.getElementById("statusFilter"),
+    ownerFilter: document.getElementById("ownerFilter"),
+    taskTableBody: document.getElementById("taskTableBody"),
+    overdueHint: document.getElementById("overdueHint"),
+    footerNote: document.getElementById("footerNote"),
+    sourceLine: document.getElementById("sourceLine"),
+    lastLoaded: document.getElementById("lastLoaded")
+  };
+
+  function populateFilterOptions(data){
+    var statuses = [];
+    var owners = [];
+    data.forEach(function(d){
+      if (d.status && statuses.indexOf(d.status) === -1) statuses.push(d.status);
+      if (d.owner && owners.indexOf(d.owner) === -1) owners.push(d.owner);
+    });
+    statuses.sort();
+    owners.sort();
+
+    els.statusFilter.innerHTML = '<option value="">All statuses</option>' +
+      statuses.map(function(s){ return '<option value="' + escapeHtml(s) + '">' + escapeHtml(s) + '</option>'; }).join("");
+    els.ownerFilter.innerHTML = '<option value="">All owners</option>' +
+      owners.map(function(o){ return '<option value="' + escapeHtml(o) + '">' + escapeHtml(o) + '</option>'; }).join("");
+
+    activeStatusFilter = "";
+    activeOwnerFilter = "";
+  }
+
+  function render(){
+    var today = todayMidnight();
+    var total = currentData.length;
+    var doneCount = 0, blockedCount = 0, overdueCount = 0, exceptionsTotal = 0;
+
+    currentData.forEach(function(d){
+      var norm = normStatus(d.status);
+      if (norm === "done") doneCount++;
+      if (norm === "blocked") blockedCount++;
+      exceptionsTotal += (isNaN(d.openExceptions) ? 0 : d.openExceptions);
+      var due = parseDate(d.dueDate);
+      if (norm !== "done" && due && due < today) overdueCount++;
+    });
+
+    // Stats
+    els.statProgress.innerHTML = doneCount + "<small>/" + total + "</small>";
+    els.statProgressBar.style.width = (total > 0 ? Math.round((doneCount/total)*100) : 0) + "%";
+    els.statBlocked.textContent = blockedCount;
+    els.statOverdue.textContent = overdueCount;
+    els.statExceptions.textContent = exceptionsTotal;
+
+    // Sign-off banner
+    var readyForSignoff = total > 0 && doneCount === total && exceptionsTotal === 0;
+    els.signoffBanner.className = "signoff " + (readyForSignoff ? "unlocked" : "locked");
+    els.signoffText.textContent = readyForSignoff
+      ? "READY — every task is Done and open exceptions are zero"
+      : "LOCKED — close is not ready for sign-off";
+    els.signoffSub.textContent = readyForSignoff
+      ? "This checklist meets the sign-off condition. Confirm independently before finalizing close."
+      : "Every task must be Done and open exceptions must total zero.";
+    els.signoffBadge.textContent = doneCount + " / " + total + " done \u00B7 " + exceptionsTotal + " exception" + (exceptionsTotal === 1 ? "" : "s");
+
+    // Blockers
+    var blockers = currentData.filter(function(d){ return normStatus(d.status) === "blocked"; });
+    if (blockers.length === 0){
+      els.blockersContainer.innerHTML = '<div class="blockers-empty">No tasks are currently marked Blocked.</div>';
+    } else {
+      els.blockersContainer.innerHTML = blockers.map(function(d){
+        return '<div class="blocker-card">' +
+          '<div class="field"><div class="k">Task</div><div class="v task">' + escapeHtml(d.task) + '</div></div>' +
+          '<div class="field"><div class="k">Owner</div><div class="v">' + escapeHtml(d.owner) + '</div></div>' +
+          '<div class="field"><div class="k">Due date</div><div class="v">' + escapeHtml(d.dueDate) + '</div></div>' +
+          '<div class="field"><div class="k">Reason</div><div class="v">' + escapeHtml(d.notes || "\u2014") + '</div></div>' +
+          '<div class="field"><div class="k">Exceptions</div><div class="v exc">' + d.openExceptions + '</div></div>' +
+        '</div>';
+      }).join("");
+    }
+
+    // Table (filtered)
+    var filtered = currentData.filter(function(d){
+      if (activeStatusFilter && d.status !== activeStatusFilter) return false;
+      if (activeOwnerFilter && d.owner !== activeOwnerFilter) return false;
+      return true;
+    });
+
+    if (filtered.length === 0){
+      els.taskTableBody.innerHTML = '<tr class="empty-row"><td colspan="7">No tasks match the current filters.</td></tr>';
+    } else {
+      els.taskTableBody.innerHTML = filtered.map(function(d){
+        var norm = normStatus(d.status);
+        var due = parseDate(d.dueDate);
+        var isOverdue = norm !== "done" && due && due < today;
+        return '<tr>' +
+          '<td>' + escapeHtml(d.task) + '</td>' +
+          '<td>' + escapeHtml(d.owner) + '</td>' +
+          '<td>' + escapeHtml(d.dueDate) + (isOverdue ? '<div class="overdue-flag">Overdue</div>' : '') + '</td>' +
+          '<td><span class="status-badge ' + statusBadgeClass(norm) + '">' + escapeHtml(d.status) + '</span></td>' +
+          '<td>' + d.openExceptions + '</td>' +
+          '<td>' + escapeHtml(d.lastUpdated) + '</td>' +
+          '<td class="notes">' + escapeHtml(d.notes) + '</td>' +
+        '</tr>';
+      }).join("");
+    }
+
+    els.overdueHint.textContent = "Overdue is evaluated against today's date (" +
+      today.toLocaleDateString(undefined, { year:"numeric", month:"short", day:"numeric" }) + ") in your browser.";
+  }
+
+  function loadData(csvText, sourceLabel){
+    currentData = parseChecklist(csvText);
+    populateFilterOptions(currentData);
+    els.sourceLine.textContent = sourceLabel;
+    els.lastLoaded.textContent = "Loaded " + new Date().toLocaleTimeString(undefined, { hour:"2-digit", minute:"2-digit" });
+    els.footerNote.textContent = currentData.length + " task" + (currentData.length === 1 ? "" : "s") + " loaded from " + sourceLabel + ".";
+    render();
+  }
+
+  els.statusFilter.addEventListener("change", function(){
+    activeStatusFilter = this.value;
+    render();
+  });
+  els.ownerFilter.addEventListener("change", function(){
+    activeOwnerFilter = this.value;
+    render();
+  });
+
+  var uploadBtn = document.getElementById("uploadBtn");
+  var csvInput = document.getElementById("csvInput");
+  uploadBtn.addEventListener("click", function(){ csvInput.click(); });
+  csvInput.addEventListener("change", function(e){
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(evt){
+      loadData(evt.target.result, file.name);
+    };
+    reader.onerror = function(){
+      alert("Could not read that file. Please try again with a plain CSV export.");
+    };
+    reader.readAsText(file);
+  });
+
+  // initial load
+  loadData(SAMPLE_CSV, "Sample data \u2014 day6_close_checklist.csv");
+
+})();
+</script>
+
+</body>
+</html>
